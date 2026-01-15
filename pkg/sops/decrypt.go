@@ -98,17 +98,34 @@ type DecryptedData struct {
 
 // Decrypt decrypts a SOPS-encrypted YAML and returns the data.
 // The input should be the full SOPS YAML including sops metadata block.
+// Deprecated: Use DecryptCRD for the new CRD format with spec.data.
 func (d *Decryptor) Decrypt(encryptedYAML []byte) (*DecryptedData, error) {
 	return d.DecryptWithContext(context.Background(), encryptedYAML)
 }
 
 // DecryptWithContext decrypts with a custom context for cancellation.
+// Deprecated: Use DecryptCRDWithContext for the new CRD format with spec.data.
 func (d *Decryptor) DecryptWithContext(ctx context.Context, encryptedYAML []byte) (*DecryptedData, error) {
 	decrypted, err := d.runSopsDecrypt(ctx, encryptedYAML)
 	if err != nil {
 		return nil, err
 	}
 	return parseDecryptedYAML(decrypted)
+}
+
+// DecryptCRD decrypts a SopsSecret CRD and extracts the spec.data field.
+// The input should be the serialized CRD with spec.data and sops metadata.
+func (d *Decryptor) DecryptCRD(encryptedYAML []byte) (*DecryptedData, error) {
+	return d.DecryptCRDWithContext(context.Background(), encryptedYAML)
+}
+
+// DecryptCRDWithContext decrypts a CRD with a custom context for cancellation.
+func (d *Decryptor) DecryptCRDWithContext(ctx context.Context, encryptedYAML []byte) (*DecryptedData, error) {
+	decrypted, err := d.runSopsDecrypt(ctx, encryptedYAML)
+	if err != nil {
+		return nil, err
+	}
+	return parseCRDDecryptedYAML(decrypted)
 }
 
 // DecryptToYAML decrypts and returns raw YAML bytes.
@@ -174,6 +191,30 @@ func (d *Decryptor) runSopsDecrypt(ctx context.Context, encryptedYAML []byte) ([
 	return stdout.Bytes(), nil
 }
 
+// parseCRDDecryptedYAML parses the decrypted CRD YAML and extracts spec.data.
+func parseCRDDecryptedYAML(data []byte) (*DecryptedData, error) {
+	var raw map[string]interface{}
+
+	decoder := yaml.NewDecoder(bytes.NewReader(data))
+	if err := decoder.Decode(&raw); err != nil {
+		return nil, fmt.Errorf("failed to parse decrypted YAML: %w", err)
+	}
+
+	// Extract spec.data
+	spec, ok := raw["spec"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("missing or invalid 'spec' field in decrypted YAML")
+	}
+
+	dataField, ok := spec["data"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("missing or invalid 'spec.data' field in decrypted YAML")
+	}
+
+	return convertToDecryptedData(dataField)
+}
+
+// parseDecryptedYAML parses flat decrypted YAML (legacy format).
 func parseDecryptedYAML(data []byte) (*DecryptedData, error) {
 	var raw map[string]interface{}
 
@@ -182,17 +223,20 @@ func parseDecryptedYAML(data []byte) (*DecryptedData, error) {
 		return nil, fmt.Errorf("failed to parse decrypted YAML: %w", err)
 	}
 
+	// Remove sops metadata if present
+	delete(raw, "sops")
+
+	return convertToDecryptedData(raw)
+}
+
+// convertToDecryptedData converts a map to DecryptedData.
+func convertToDecryptedData(raw map[string]interface{}) (*DecryptedData, error) {
 	result := &DecryptedData{
 		Data:       make(map[string][]byte),
 		StringData: make(map[string]string),
 	}
 
 	for key, value := range raw {
-		// Skip sops metadata if present in decrypted output
-		if key == "sops" {
-			continue
-		}
-
 		switch v := value.(type) {
 		case string:
 			result.Data[key] = []byte(v)
@@ -243,6 +287,7 @@ func parseDecryptedYAML(data []byte) (*DecryptedData, error) {
 }
 
 // ValidateEncryptedYAML checks if the given data is a valid SOPS-encrypted YAML.
+// Works with both legacy format (sops at root) and CRD format (spec.data + sops at root).
 func ValidateEncryptedYAML(data []byte) error {
 	if len(data) == 0 {
 		return fmt.Errorf("empty YAML data")

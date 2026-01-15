@@ -21,6 +21,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -51,12 +52,13 @@ var _ = Describe("SopsSecret Controller", func() {
 						Namespace: "default",
 					},
 					Spec: secretsv1alpha1.SopsSecretSpec{
-						SopsSecret: `
-username: test
-sops:
-    mac: ENC[AES256_GCM,data:test,iv:test,tag:test,type:str]
-    version: 3.9.0
-`,
+						Data: map[string]apiextensionsv1.JSON{
+							"username": {Raw: []byte(`"test"`)},
+						},
+					},
+					Sops: &secretsv1alpha1.SopsMetadata{
+						Mac:     "ENC[AES256_GCM,data:test,iv:test,tag:test,type:str]",
+						Version: "3.9.0",
 					},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
@@ -77,7 +79,7 @@ sops:
 			resource := &secretsv1alpha1.SopsSecret{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(resource.Spec.SopsSecret).To(ContainSubstring("username"))
+			Expect(resource.Spec.Data).To(HaveKey("username"))
 		})
 	})
 })

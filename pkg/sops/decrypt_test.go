@@ -265,6 +265,97 @@ func TestDecryptWithContext_Timeout(t *testing.T) {
 	// Error is expected (either timeout or sops not found)
 }
 
+func TestParseCRDDecryptedYAML(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		wantKeys []string
+		wantVals map[string]string
+		wantErr  bool
+		errMsg   string
+	}{
+		{
+			name: "valid CRD structure",
+			input: `
+spec:
+  data:
+    username: admin
+    password: secret123
+`,
+			wantKeys: []string{"username", "password"},
+			wantVals: map[string]string{
+				"username": "admin",
+				"password": "secret123",
+			},
+			wantErr: false,
+		},
+		{
+			name: "nested data in spec",
+			input: `
+spec:
+  data:
+    database:
+      host: localhost
+      port: 5432
+    api_key: test123
+`,
+			wantKeys: []string{"database", "api_key"},
+			wantVals: map[string]string{
+				"api_key": "test123",
+			},
+			wantErr: false,
+		},
+		{
+			name: "missing spec field",
+			input: `
+data:
+  username: admin
+`,
+			wantErr: true,
+			errMsg:  "missing or invalid 'spec' field",
+		},
+		{
+			name: "missing data field in spec",
+			input: `
+spec:
+  secretName: test
+`,
+			wantErr: true,
+			errMsg:  "missing or invalid 'spec.data' field",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := parseCRDDecryptedYAML([]byte(tt.input))
+			if (err != nil) != tt.wantErr {
+				t.Errorf("parseCRDDecryptedYAML() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.wantErr {
+				if tt.errMsg != "" && !containsString(err.Error(), tt.errMsg) {
+					t.Errorf("parseCRDDecryptedYAML() error = %v, want error containing %q", err, tt.errMsg)
+				}
+				return
+			}
+
+			// Check all expected keys exist
+			for _, key := range tt.wantKeys {
+				if _, ok := result.Data[key]; !ok {
+					t.Errorf("parseCRDDecryptedYAML() missing key %q", key)
+				}
+			}
+
+			// Check values
+			for key, wantVal := range tt.wantVals {
+				if gotVal := result.StringData[key]; gotVal != wantVal {
+					t.Errorf("parseCRDDecryptedYAML() key %q = %q, want %q", key, gotVal, wantVal)
+				}
+			}
+		})
+	}
+}
+
 // Helper function
 func containsString(s, substr string) bool {
 	return strings.Contains(s, substr)

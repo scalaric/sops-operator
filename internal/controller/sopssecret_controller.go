@@ -20,10 +20,12 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/yaml"
 
 	secretsv1alpha1 "github.com/gg/sops-operator/api/v1alpha1"
 	"github.com/gg/sops-operator/pkg/sops"
@@ -57,6 +60,30 @@ type SopsSecretReconciler struct {
 	Scheme    *runtime.Scheme
 	Recorder  record.EventRecorder
 	Decryptor *sops.Decryptor
+}
+
+// decryptPayload is the structure we serialize for SOPS decryption.
+// It only contains the fields that SOPS encrypted.
+type decryptPayload struct {
+	Spec struct {
+		Data map[string]interface{} `json:"data"`
+	} `json:"spec"`
+	Sops *secretsv1alpha1.SopsMetadata `json:"sops"`
+}
+
+// convertDataToInterface converts apiextensionsv1.JSON map to interface{} map for serialization.
+func convertDataToInterface(data map[string]apiextensionsv1.JSON) map[string]interface{} {
+	result := make(map[string]interface{}, len(data))
+	for k, v := range data {
+		var val interface{}
+		if err := json.Unmarshal(v.Raw, &val); err != nil {
+			// If unmarshal fails, use raw bytes as string
+			result[k] = string(v.Raw)
+		} else {
+			result[k] = val
+		}
+	}
+	return result
 }
 
 // +kubebuilder:rbac:groups=secrets.gg.io,resources=sopssecrets,verbs=get;list;watch;create;update;patch;delete
@@ -98,8 +125,21 @@ func (r *SopsSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, nil
 	}
 
+	// Build the payload for SOPS decryption
+	payload := decryptPayload{
+		Sops: sopsSecret.Sops,
+	}
+	payload.Spec.Data = convertDataToInterface(sopsSecret.Spec.Data)
+
+	// Serialize to YAML for hashing and decryption
+	payloadYAML, err := yaml.Marshal(payload)
+	if err != nil {
+		log.Error(err, "Failed to serialize SopsSecret for decryption")
+		return ctrl.Result{}, err
+	}
+
 	// Calculate hash of encrypted data
-	hash := calculateHash(sopsSecret.Spec.SopsSecret)
+	hash := calculateHash(string(payloadYAML))
 
 	// Check if we need to re-decrypt
 	if sopsSecret.Status.LastDecryptedHash == hash &&
@@ -122,18 +162,28 @@ func (r *SopsSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		// Secret was deleted, need to recreate
 	}
 
-	// Validate encrypted YAML
-	if err := sops.ValidateEncryptedYAML([]byte(sopsSecret.Spec.SopsSecret)); err != nil {
+	// Validate that sops metadata exists
+	if sopsSecret.Sops == nil {
 		r.setCondition(sopsSecret, secretsv1alpha1.ConditionTypeDecrypted, metav1.ConditionFalse,
-			"ValidationFailed", fmt.Sprintf("Invalid SOPS YAML: %v", err))
+			"ValidationFailed", "Missing sops metadata block - run 'sops -e -i' on the CRD file")
 		r.setCondition(sopsSecret, secretsv1alpha1.ConditionTypeReady, metav1.ConditionFalse,
-			"ValidationFailed", "SOPS YAML validation failed")
-		r.Recorder.Event(sopsSecret, corev1.EventTypeWarning, ReasonValidationFail, err.Error())
+			"ValidationFailed", "SOPS metadata not found")
+		r.Recorder.Event(sopsSecret, corev1.EventTypeWarning, ReasonValidationFail, "Missing sops metadata block")
 		return r.updateStatus(ctx, sopsSecret)
 	}
 
-	// Decrypt the secret
-	decrypted, err := r.Decryptor.Decrypt([]byte(sopsSecret.Spec.SopsSecret))
+	// Validate MAC exists
+	if sopsSecret.Sops.Mac == "" {
+		r.setCondition(sopsSecret, secretsv1alpha1.ConditionTypeDecrypted, metav1.ConditionFalse,
+			"ValidationFailed", "Missing MAC in sops metadata")
+		r.setCondition(sopsSecret, secretsv1alpha1.ConditionTypeReady, metav1.ConditionFalse,
+			"ValidationFailed", "SOPS MAC not found")
+		r.Recorder.Event(sopsSecret, corev1.EventTypeWarning, ReasonValidationFail, "Missing MAC in sops metadata")
+		return r.updateStatus(ctx, sopsSecret)
+	}
+
+	// Decrypt the data
+	decrypted, err := r.Decryptor.DecryptCRD(payloadYAML)
 	if err != nil {
 		log.Error(err, "Failed to decrypt SopsSecret")
 		r.setCondition(sopsSecret, secretsv1alpha1.ConditionTypeDecrypted, metav1.ConditionFalse,
