@@ -23,7 +23,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a \
     -o manager cmd/main.go
 
 # Download SOPS binary
-FROM alpine:3.21 AS sops-downloader
+FROM alpine:3.23 AS sops-downloader
 ARG TARGETARCH
 ARG SOPS_VERSION=3.9.2
 
@@ -38,7 +38,7 @@ RUN apk add --no-cache curl && \
     chmod +x /sops
 
 # Final image with SOPS
-FROM alpine:3.21
+FROM alpine:3.23
 WORKDIR /
 
 # Install ca-certificates for HTTPS and age for potential direct key operations
