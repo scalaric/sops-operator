@@ -1,7 +1,10 @@
 # Build the manager binary
-FROM golang:1.25-alpine AS builder
+FROM golang:1.24-alpine AS builder
 ARG TARGETOS
 ARG TARGETARCH
+ARG VERSION=dev
+ARG GIT_COMMIT=unknown
+ARG BUILD_DATE=unknown
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
@@ -14,8 +17,10 @@ RUN go mod download
 # Copy the Go source (relies on .dockerignore to filter)
 COPY . .
 
-# Build
-RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o manager cmd/main.go
+# Build with version info
+RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a \
+    -ldflags "-X main.version=${VERSION} -X main.gitCommit=${GIT_COMMIT} -X main.buildDate=${BUILD_DATE}" \
+    -o manager cmd/main.go
 
 # Download SOPS binary
 FROM alpine:3.21 AS sops-downloader
