@@ -2,6 +2,7 @@ package sops
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 )
@@ -235,7 +236,8 @@ func TestNewDecryptorFromEnv(t *testing.T) {
 	})
 
 	t.Run("filters comments and empty lines", func(t *testing.T) {
-		t.Setenv("SOPS_AGE_KEY", "# comment\n\nAGE-SECRET-KEY-1QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ\n  \n")
+		testKey := "# comment\n\nAGE-SECRET-KEY-1QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ\n  \n"
+		t.Setenv("SOPS_AGE_KEY", testKey)
 		t.Setenv("SOPS_AGE_KEY_FILE", "")
 
 		d, err := NewDecryptorFromEnv()
@@ -265,5 +267,5 @@ func TestDecryptWithContext_Timeout(t *testing.T) {
 
 // Helper function
 func containsString(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && (s[:len(substr)] == substr || containsString(s[1:], substr)))
+	return strings.Contains(s, substr)
 }

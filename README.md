@@ -2,8 +2,9 @@
 
 A Kubernetes operator that decrypts [SOPS](https://github.com/getsops/sops)-encrypted secrets and creates native Kubernetes Secrets.
 
-[![CI](https://github.com/gg/sops-operator/actions/workflows/ci.yml/badge.svg)](https://github.com/gg/sops-operator/actions/workflows/ci.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/gg/sops-operator)](https://goreportcard.com/report/github.com/gg/sops-operator)
+[![CI](https://github.com/scalaric/sops-operator/actions/workflows/ci.yml/badge.svg)](https://github.com/scalaric/sops-operator/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/scalaric/sops-operator)](https://goreportcard.com/report/github.com/scalaric/sops-operator)
+[![Renovate](https://img.shields.io/badge/renovate-enabled-brightgreen.svg)](https://renovatebot.com)
 
 ## Features
 
@@ -34,7 +35,7 @@ age-keygen -o age.key
 
 ```bash
 # Install CRDs and operator
-kubectl apply -f https://github.com/gg/sops-operator/releases/latest/download/install.yaml
+kubectl apply -f https://github.com/scalaric/sops-operator/releases/latest/download/install.yaml
 
 # Create the AGE key secret
 kubectl create secret generic sops-age-key \

@@ -149,11 +149,7 @@ func (r *SopsSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	r.Recorder.Event(sopsSecret, corev1.EventTypeNormal, ReasonDecrypted, "Successfully decrypted SOPS data")
 
 	// Create or update the Kubernetes Secret
-	secret, err := r.buildSecret(sopsSecret, decrypted)
-	if err != nil {
-		log.Error(err, "Failed to build Secret")
-		return ctrl.Result{}, err
-	}
+	secret := r.buildSecret(sopsSecret, decrypted)
 
 	// Set owner reference
 	if err := controllerutil.SetControllerReference(sopsSecret, secret, r.Scheme); err != nil {
@@ -243,7 +239,7 @@ func (r *SopsSecretReconciler) reconcileDelete(ctx context.Context, sopsSecret *
 	return ctrl.Result{}, nil
 }
 
-func (r *SopsSecretReconciler) buildSecret(sopsSecret *secretsv1alpha1.SopsSecret, decrypted *sops.DecryptedData) (*corev1.Secret, error) {
+func (r *SopsSecretReconciler) buildSecret(sopsSecret *secretsv1alpha1.SopsSecret, decrypted *sops.DecryptedData) *corev1.Secret {
 	secretName := r.getSecretName(sopsSecret)
 	secretType := sopsSecret.Spec.SecretType
 	if secretType == "" {
@@ -272,7 +268,7 @@ func (r *SopsSecretReconciler) buildSecret(sopsSecret *secretsv1alpha1.SopsSecre
 		},
 		Type: secretType,
 		Data: decrypted.Data,
-	}, nil
+	}
 }
 
 func (r *SopsSecretReconciler) getSecretName(sopsSecret *secretsv1alpha1.SopsSecret) string {

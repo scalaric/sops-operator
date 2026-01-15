@@ -129,8 +129,8 @@ func (d *Decryptor) runSopsDecrypt(ctx context.Context, encryptedYAML []byte) ([
 	}
 	tmpPath := tmpFile.Name()
 	defer func() {
-		tmpFile.Close()
-		os.Remove(tmpPath)
+		_ = tmpFile.Close()
+		_ = os.Remove(tmpPath)
 	}()
 
 	if _, err := tmpFile.Write(encryptedYAML); err != nil {

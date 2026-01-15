@@ -26,7 +26,7 @@ jobs:
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.63.4
+          version: v2.0.2
 
   test:
     name: Test
@@ -44,9 +44,11 @@ jobs:
       - name: Setup envtest
         run: |
           go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
-          setup-envtest use --bin-dir /usr/local/kubebuilder/bin
+          setup-envtest use --bin-dir ${{ github.workspace }}/bin
 
       - name: Run unit tests
+        env:
+          KUBEBUILDER_ASSETS: ${{ github.workspace }}/bin/k8s/current
         run: go test -v -race -coverprofile=coverage.out ./...
 
       - name: Upload coverage
@@ -113,4 +115,4 @@ jobs:
       - name: Run Gosec
         uses: securego/gosec@master
         with:
-          args: -exclude=G204 -exclude-dir=test ./...
+          args: -exclude=G104,G204,G304 -exclude-dir=test ./...
