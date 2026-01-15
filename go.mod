@@ -1,6 +1,6 @@
 module github.com/gg/sops-operator
 
-go 1.25.5
+go 1.24.0
 
 require (
 	github.com/onsi/ginkgo/v2 v2.27.5

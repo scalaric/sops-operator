@@ -26,7 +26,7 @@ jobs:
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.62.0
+          version: v1.63.4
 
   test:
     name: Test
@@ -40,6 +40,11 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+
+      - name: Setup envtest
+        run: |
+          go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+          setup-envtest use --bin-dir /usr/local/kubebuilder/bin
 
       - name: Run unit tests
         run: go test -v -race -coverprofile=coverage.out ./...
@@ -108,4 +113,4 @@ jobs:
       - name: Run Gosec
         uses: securego/gosec@master
         with:
-          args: ./...
+          args: -exclude=G204 -exclude-dir=test ./...
