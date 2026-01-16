@@ -1,0 +1,23 @@
+apiVersion: v2
+name: sops-operator
+description: A Kubernetes operator that decrypts SOPS-encrypted secrets and creates native Kubernetes Secrets
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+kubeVersion: ">=1.26.0-0"
+home: https://github.com/scalaric/sops-operator
+sources:
+  - https://github.com/scalaric/sops-operator
+maintainers:
+  - name: scalaric
+    url: https://github.com/scalaric
+keywords:
+  - sops
+  - secrets
+  - encryption
+  - operator
+  - kubernetes
+  - age
+annotations:
+  artifacthub.io/license: Apache-2.0
+  artifacthub.io/category: security

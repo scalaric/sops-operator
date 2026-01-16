@@ -1,0 +1,110 @@
+# Default values for sops-operator
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/scalaric/sops-operator
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# -- Name of the secret containing the AGE key
+ageKeySecretName: sops-age-key
+# -- Key in the secret containing the AGE private key
+ageKeySecretKey: age.key
+
+serviceAccount:
+  # -- Specifies whether a service account should be created
+  create: true
+  # -- Annotations to add to the service account
+  annotations: {}
+  # -- The name of the service account to use
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 128Mi
+  requests:
+    cpu: 10m
+    memory: 64Mi
+
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: 8081
+  initialDelaySeconds: 15
+  periodSeconds: 20
+
+readinessProbe:
+  httpGet:
+    path: /readyz
+    port: 8081
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# -- Enable leader election for controller manager
+leaderElection:
+  enabled: true
+
+# -- Additional arguments to pass to the manager
+extraArgs: []
+
+# -- Additional environment variables
+extraEnv: []
+
+# -- Additional volume mounts
+extraVolumeMounts: []
+
+# -- Additional volumes
+extraVolumes: []
+
+metrics:
+  # -- Enable metrics endpoint
+  enabled: true
+  # -- Port for metrics endpoint
+  port: 8443
+  service:
+    # -- Create a service for metrics
+    enabled: true
+    # -- Service type
+    type: ClusterIP
+    # -- Annotations for metrics service
+    annotations: {}
+
+serviceMonitor:
+  # -- Create a ServiceMonitor for Prometheus Operator
+  enabled: false
+  # -- Namespace for ServiceMonitor (defaults to release namespace)
+  namespace: ""
+  # -- Interval at which metrics should be scraped
+  interval: 30s
+  # -- Labels for ServiceMonitor
+  labels: {}
+  # -- Annotations for ServiceMonitor
+  annotations: {}
