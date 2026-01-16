@@ -4,6 +4,8 @@ A Kubernetes operator that decrypts [SOPS](https://github.com/getsops/sops)-encr
 
 [![CI](https://github.com/scalaric/sops-operator/actions/workflows/ci.yml/badge.svg)](https://github.com/scalaric/sops-operator/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/scalaric/sops-operator)](https://goreportcard.com/report/github.com/scalaric/sops-operator)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/scalaric/sops-operator/badge)](https://securityscorecards.dev/viewer/?uri=github.com/scalaric/sops-operator)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Renovate](https://img.shields.io/badge/renovate-enabled-brightgreen.svg)](https://renovatebot.com)
 
 ## Features

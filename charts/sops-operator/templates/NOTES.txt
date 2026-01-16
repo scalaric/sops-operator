@@ -1,0 +1,38 @@
+Thank you for installing {{ .Chart.Name }}!
+
+Your release is named {{ .Release.Name }}.
+
+To verify the installation, run:
+
+  kubectl get pods -n {{ .Release.Namespace }} -l app.kubernetes.io/name={{ include "sops-operator.name" . }}
+
+Before creating SopsSecrets, make sure you have created the AGE key secret:
+
+  kubectl create secret generic {{ .Values.ageKeySecretName }} \
+    --from-file={{ .Values.ageKeySecretKey }}=./age.key \
+    -n {{ .Release.Namespace }}
+
+Example SopsSecret:
+
+  apiVersion: secrets.gg.io/v1alpha1
+  kind: SopsSecret
+  metadata:
+    name: my-secret
+    namespace: default
+  spec:
+    sopsSecret: |
+      username: ENC[AES256_GCM,data:...,iv:...,tag:...,type:str]
+      password: ENC[AES256_GCM,data:...,iv:...,tag:...,type:str]
+      sops:
+          age:
+              - recipient: age1...
+                enc: |
+                  -----BEGIN AGE ENCRYPTED FILE-----
+                  ...
+                  -----END AGE ENCRYPTED FILE-----
+          lastmodified: "2024-01-15T00:00:00Z"
+          mac: ENC[AES256_GCM,data:...,iv:...,tag:...,type:str]
+          version: 3.9.0
+
+For more information, visit:
+  https://github.com/scalaric/sops-operator
