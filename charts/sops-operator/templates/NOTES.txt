@@ -14,7 +14,7 @@ Before creating SopsSecrets, make sure you have created the AGE key secret:
 
 Example SopsSecret:
 
-  apiVersion: secrets.gg.io/v1alpha1
+  apiVersion: secrets.scalaric.io/v1alpha1
   kind: SopsSecret
   metadata:
     name: my-secret

@@ -3,19 +3,19 @@
 # and allow the plugins properly work.
 # More info: https://book.kubebuilder.io/reference/project-config.html
 cliVersion: 4.10.1
-domain: gg.io
+domain: scalaric.io
 layout:
 - go.kubebuilder.io/v4
 projectName: sops-operator
-repo: github.com/gg/sops-operator
+repo: github.com/scalaric/sops-operator
 resources:
 - api:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: gg.io
+  domain: scalaric.io
   group: secrets
   kind: SopsSecret
-  path: github.com/gg/sops-operator/api/v1alpha1
+  path: github.com/scalaric/sops-operator/api/v1alpha1
   version: v1alpha1
 version: "3"

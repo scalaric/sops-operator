@@ -25,7 +25,7 @@ rules:
       - update
       - watch
   - apiGroups:
-      - secrets.gg.io
+      - secrets.scalaric.io
     resources:
       - sopssecrets
     verbs:
@@ -37,13 +37,13 @@ rules:
       - update
       - watch
   - apiGroups:
-      - secrets.gg.io
+      - secrets.scalaric.io
     resources:
       - sopssecrets/finalizers
     verbs:
       - update
   - apiGroups:
-      - secrets.gg.io
+      - secrets.scalaric.io
     resources:
       - sopssecrets/status
     verbs:

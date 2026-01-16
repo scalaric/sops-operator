@@ -1,4 +1,4 @@
-module github.com/gg/sops-operator
+module github.com/scalaric/sops-operator
 
 go 1.24.0
 

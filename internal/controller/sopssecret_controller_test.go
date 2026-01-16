@@ -26,7 +26,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	secretsv1alpha1 "github.com/gg/sops-operator/api/v1alpha1"
+	secretsv1alpha1 "github.com/scalaric/sops-operator/api/v1alpha1"
 )
 
 var _ = Describe("SopsSecret Controller", func() {

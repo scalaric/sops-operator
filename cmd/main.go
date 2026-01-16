@@ -36,9 +36,9 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	secretsv1alpha1 "github.com/gg/sops-operator/api/v1alpha1"
-	"github.com/gg/sops-operator/internal/controller"
-	"github.com/gg/sops-operator/pkg/sops"
+	secretsv1alpha1 "github.com/scalaric/sops-operator/api/v1alpha1"
+	"github.com/scalaric/sops-operator/internal/controller"
+	"github.com/scalaric/sops-operator/pkg/sops"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -176,7 +176,7 @@ func main() {
 		WebhookServer:          webhookServer,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "a1687995.gg.io",
+		LeaderElectionID:       "a1687995.scalaric.io",
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly

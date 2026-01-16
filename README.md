@@ -61,7 +61,7 @@ sops -e -a age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p secret
 ### 4. Create a SopsSecret
 
 ```yaml
-apiVersion: secrets.gg.io/v1alpha1
+apiVersion: secrets.scalaric.io/v1alpha1
 kind: SopsSecret
 metadata:
   name: my-secret

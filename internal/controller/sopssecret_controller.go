@@ -35,12 +35,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	secretsv1alpha1 "github.com/gg/sops-operator/api/v1alpha1"
-	"github.com/gg/sops-operator/pkg/sops"
+	secretsv1alpha1 "github.com/scalaric/sops-operator/api/v1alpha1"
+	"github.com/scalaric/sops-operator/pkg/sops"
 )
 
 const (
-	finalizerName = "secrets.gg.io/finalizer"
+	finalizerName = "secrets.scalaric.io/finalizer"
 
 	// Event reasons
 	ReasonDecrypted      = "Decrypted"
@@ -59,9 +59,9 @@ type SopsSecretReconciler struct {
 	Decryptor *sops.Decryptor
 }
 
-// +kubebuilder:rbac:groups=secrets.gg.io,resources=sopssecrets,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=secrets.gg.io,resources=sopssecrets/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=secrets.gg.io,resources=sopssecrets/finalizers,verbs=update
+// +kubebuilder:rbac:groups=secrets.scalaric.io,resources=sopssecrets,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=secrets.scalaric.io,resources=sopssecrets/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=secrets.scalaric.io,resources=sopssecrets/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 
@@ -248,13 +248,13 @@ func (r *SopsSecretReconciler) buildSecret(sopsSecret *secretsv1alpha1.SopsSecre
 
 	labels := make(map[string]string)
 	labels["app.kubernetes.io/managed-by"] = "sops-operator"
-	labels["secrets.gg.io/sopssecret"] = sopsSecret.Name
+	labels["secrets.scalaric.io/sopssecret"] = sopsSecret.Name
 	for k, v := range sopsSecret.Spec.SecretLabels {
 		labels[k] = v
 	}
 
 	annotations := make(map[string]string)
-	annotations["secrets.gg.io/source"] = fmt.Sprintf("%s/%s", sopsSecret.Namespace, sopsSecret.Name)
+	annotations["secrets.scalaric.io/source"] = fmt.Sprintf("%s/%s", sopsSecret.Namespace, sopsSecret.Name)
 	for k, v := range sopsSecret.Spec.SecretAnnotations {
 		annotations[k] = v
 	}

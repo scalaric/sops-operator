@@ -43,7 +43,7 @@ body:
       description: The SopsSecret manifest (remove sensitive data)
       render: yaml
       placeholder: |
-        apiVersion: secrets.gg.io/v1alpha1
+        apiVersion: secrets.scalaric.io/v1alpha1
         kind: SopsSecret
         metadata:
           name: example
