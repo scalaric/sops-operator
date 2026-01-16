@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0](https://github.com/scalaric/sops-operator/compare/v1.0.1...v2.0.0) (2026-01-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* API group changed from secrets.gg.io to secrets.scalaric.io. Users must update their SopsSecret manifests to use the new apiVersion.
+
+### Code Refactoring
+
+* rename API group from secrets.gg.io to secrets.scalaric.io ([b7341ea](https://github.com/scalaric/sops-operator/commit/b7341ead60c960f44e9b0a59527d0ae23e982a92))
+
 ## 1.0.0 (2026-01-15)
 
 
