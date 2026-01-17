@@ -1,0 +1,54 @@
+name: Fuzz Testing
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  schedule:
+    # Daily at 02:00 UTC
+    - cron: '0 2 * * *'
+
+# Declare minimal permissions at workflow level
+permissions: {}
+
+jobs:
+  fuzz:
+    name: Fuzz Tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run fuzz tests
+        run: |
+          # Determine fuzz duration based on event type
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            FUZZ_TIME="5m"
+          else
+            FUZZ_TIME="30s"
+          fi
+          echo "Fuzz duration: ${FUZZ_TIME}"
+
+          # Run fuzz tests - each test runs for the specified duration
+          go test -fuzz=FuzzParseDecryptedYAML -fuzztime="${FUZZ_TIME}" ./pkg/sops/ -v
+          go test -fuzz=FuzzValidateEncryptedYAML -fuzztime="${FUZZ_TIME}" ./pkg/sops/ -v
+
+      - name: Upload crash artifacts
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: fuzz-crashes-${{ github.run_id }}
+          path: '**/testdata/fuzz/**'
+          retention-days: 30
+          if-no-files-found: ignore
