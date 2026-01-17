@@ -1,5 +1,6 @@
 # Build the manager binary
-FROM golang:1.24-alpine AS builder
+# renovate: datasource=docker depName=golang
+FROM golang:1.24-alpine@sha256:ea36b0763bc748640c08b682d398261bfdd82cb49b5f526949d3c8e20e26f448 AS builder
 ARG TARGETOS
 ARG TARGETARCH
 ARG VERSION=dev
@@ -23,7 +24,8 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a \
     -o manager cmd/main.go
 
 # Download SOPS binary
-FROM alpine:3.23 AS sops-downloader
+# renovate: datasource=docker depName=alpine
+FROM alpine:3.21@sha256:5405e8f36ce1878720f71217d664aa3dea32e5e5df11acbf07fc78ef5661465b AS sops-downloader
 ARG TARGETARCH
 ARG SOPS_VERSION=3.9.2
 
@@ -38,7 +40,8 @@ RUN apk add --no-cache curl && \
     chmod +x /sops
 
 # Final image with SOPS
-FROM alpine:3.23
+# renovate: datasource=docker depName=alpine
+FROM alpine:3.21@sha256:5405e8f36ce1878720f71217d664aa3dea32e5e5df11acbf07fc78ef5661465b
 WORKDIR /
 
 # Install ca-certificates for HTTPS and age for potential direct key operations
