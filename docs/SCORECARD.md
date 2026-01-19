@@ -10,7 +10,7 @@ This document describes the security practices implemented in this project and h
 
 | Check | Implementation |
 |-------|----------------|
-| **Pinned-Dependencies** | All GitHub Actions pinned to SHA hashes with version comments |
+| **Pinned-Dependencies** | All GitHub Actions and Docker images pinned to SHA hashes with version comments |
 | **Token-Permissions** | Workflow-level `permissions: {}` with minimal per-job permissions |
 | **SAST** | CodeQL analysis (`codeql.yml`) + Gosec security scanner |
 | **Fuzzing** | Native Go fuzz tests (`pkg/sops/fuzz_test.go`) |
@@ -87,6 +87,41 @@ cosign verify ghcr.io/scalaric/sops-operator:${VERSION} \
 | `scorecard.yml` | Push to main, weekly | OpenSSF Scorecard analysis |
 | `dependabot-auto-merge.yml` | Dependabot PR | Auto-merge patch/minor updates |
 | `release-please.yml` | Push to main | Automated release management |
+
+## Pinned Dependencies Guidelines
+
+### Docker Images in Dockerfile
+
+All Docker base images **must** include SHA256 digests for Scorecard compliance:
+
+```dockerfile
+# CORRECT - with SHA256 digest
+FROM golang:1.25-alpine@sha256:d9b2e14101f27ec8d09674cd01186798d227bb0daec90e032aeb1cd22ac0f029 AS builder
+
+# INCORRECT - will fail Scorecard
+FROM golang:1.25-alpine AS builder
+```
+
+To get the SHA256 digest for an image:
+
+```bash
+docker pull <image>:<tag>
+docker inspect <image>:<tag> --format='{{index .RepoDigests 0}}'
+```
+
+The `renovate` comments before each FROM statement enable automated updates while maintaining pinned digests.
+
+### GitHub Actions
+
+All GitHub Actions must be pinned to commit SHAs with version comments:
+
+```yaml
+# CORRECT
+- uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+# INCORRECT
+- uses: actions/checkout@v4
+```
 
 ## Local Verification
 
