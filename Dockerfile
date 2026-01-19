@@ -1,6 +1,6 @@
 # Build the manager binary
 # renovate: datasource=docker depName=golang
-FROM golang:1.24-alpine@sha256:ea36b0763bc748640c08b682d398261bfdd82cb49b5f526949d3c8e20e26f448 AS builder
+FROM golang:1.25-alpine@sha256:d9b2e14101f27ec8d09674cd01186798d227bb0daec90e032aeb1cd22ac0f029 AS builder
 ARG TARGETOS
 ARG TARGETARCH
 ARG VERSION=dev
