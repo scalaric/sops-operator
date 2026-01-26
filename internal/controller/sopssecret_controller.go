@@ -56,7 +56,7 @@ type SopsSecretReconciler struct {
 	client.Client
 	Scheme    *runtime.Scheme
 	Recorder  events.EventRecorder
-	Decryptor *sops.Decryptor
+	Decryptor sops.DecryptorInterface
 }
 
 // +kubebuilder:rbac:groups=secrets.scalaric.io,resources=sopssecrets,verbs=get;list;watch;create;update;patch;delete
@@ -89,7 +89,7 @@ func (r *SopsSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		if err := r.Update(ctx, sopsSecret); err != nil {
 			return ctrl.Result{}, err
 		}
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: time.Second}, nil
 	}
 
 	// Check if suspended

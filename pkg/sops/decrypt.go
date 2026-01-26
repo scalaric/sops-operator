@@ -17,11 +17,42 @@ const (
 	DefaultDecryptTimeout = 30 * time.Second
 )
 
+// DecryptorInterface defines the interface for SOPS decryption operations.
+// This interface allows for mocking in tests.
+type DecryptorInterface interface {
+	Decrypt(encryptedYAML []byte) (*DecryptedData, error)
+	DecryptWithContext(ctx context.Context, encryptedYAML []byte) (*DecryptedData, error)
+}
+
+// CommandRunner is a function type for running external commands.
+// It allows mocking command execution in tests.
+type CommandRunner func(ctx context.Context, name string, args []string, env []string, input []byte) ([]byte, error)
+
+// TempFile is an interface for temporary file operations used in decryption.
+// This interface allows for mocking in tests.
+type TempFile interface {
+	Name() string
+	Write(b []byte) (int, error)
+	Close() error
+}
+
+// TempFileCreator is a function type for creating temporary files.
+type TempFileCreator func(dir, pattern string) (TempFile, error)
+
+// defaultTempFileCreator wraps os.CreateTemp to return a TempFile interface.
+func defaultTempFileCreator(dir, pattern string) (TempFile, error) {
+	return os.CreateTemp(dir, pattern)
+}
+
 // Decryptor handles SOPS decryption with AGE keys.
 type Decryptor struct {
 	ageKeys    []string
 	ageKeyFile string
 	timeout    time.Duration
+	// For testing: allows overriding temp file creation
+	createTempFile TempFileCreator
+	// For testing: allows overriding command execution
+	runCommand CommandRunner
 }
 
 // Option configures a Decryptor.
@@ -34,11 +65,49 @@ func WithTimeout(d time.Duration) Option {
 	}
 }
 
+// withTempFileCreator is used internally for testing.
+func withTempFileCreator(fn TempFileCreator) Option {
+	return func(dec *Decryptor) {
+		dec.createTempFile = fn
+	}
+}
+
+// withCommandRunner is used internally for testing.
+func withCommandRunner(fn CommandRunner) Option {
+	return func(dec *Decryptor) {
+		dec.runCommand = fn
+	}
+}
+
+// defaultCommandRunner runs sops decrypt using exec.CommandContext.
+func defaultCommandRunner(ctx context.Context, name string, args []string, env []string, input []byte) ([]byte, error) {
+	cmd := exec.CommandContext(ctx, name, args...)
+	cmd.Env = env
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return nil, fmt.Errorf("sops decrypt timed out")
+		}
+		if ctx.Err() == context.Canceled {
+			return nil, fmt.Errorf("sops decrypt was canceled")
+		}
+		return nil, fmt.Errorf("sops decrypt failed: %w: %s", err, stderr.String())
+	}
+
+	return stdout.Bytes(), nil
+}
+
 // NewDecryptor creates a new Decryptor with the given AGE private keys.
 func NewDecryptor(ageKeys []string, opts ...Option) *Decryptor {
 	d := &Decryptor{
-		ageKeys: ageKeys,
-		timeout: DefaultDecryptTimeout,
+		ageKeys:        ageKeys,
+		timeout:        DefaultDecryptTimeout,
+		createTempFile: defaultTempFileCreator,
+		runCommand:     defaultCommandRunner,
 	}
 	for _, opt := range opts {
 		opt(d)
@@ -78,9 +147,11 @@ func NewDecryptorFromEnv(opts ...Option) (*Decryptor, error) {
 	}
 
 	d := &Decryptor{
-		ageKeys:    validKeys,
-		ageKeyFile: keyFile,
-		timeout:    DefaultDecryptTimeout,
+		ageKeys:        validKeys,
+		ageKeyFile:     keyFile,
+		timeout:        DefaultDecryptTimeout,
+		createTempFile: defaultTempFileCreator,
+		runCommand:     defaultCommandRunner,
 	}
 	for _, opt := range opts {
 		opt(d)
@@ -123,7 +194,7 @@ func (d *Decryptor) DecryptToYAMLWithContext(ctx context.Context, encryptedYAML 
 
 func (d *Decryptor) runSopsDecrypt(ctx context.Context, encryptedYAML []byte) ([]byte, error) {
 	// Create temp file for encrypted data
-	tmpFile, err := os.CreateTemp("", "sops-*.yaml")
+	tmpFile, err := d.createTempFile("", "sops-*.yaml")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp file: %w", err)
 	}
@@ -153,28 +224,22 @@ func (d *Decryptor) runSopsDecrypt(ctx context.Context, encryptedYAML []byte) ([
 		env = append(env, "SOPS_AGE_KEY_FILE="+d.ageKeyFile)
 	}
 
-	// Run sops decrypt with context
-	cmd := exec.CommandContext(execCtx, "sops", "-d", tmpPath)
-	cmd.Env = env
-
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		if execCtx.Err() == context.DeadlineExceeded {
-			return nil, fmt.Errorf("sops decrypt timed out after %v", d.timeout)
-		}
-		if execCtx.Err() == context.Canceled {
-			return nil, fmt.Errorf("sops decrypt was canceled")
-		}
-		return nil, fmt.Errorf("sops decrypt failed: %w: %s", err, stderr.String())
-	}
-
-	return stdout.Bytes(), nil
+	// Run sops decrypt
+	return d.runCommand(execCtx, "sops", []string{"-d", tmpPath}, env, encryptedYAML)
 }
 
+// yamlMarshaler is a function type for marshaling values to YAML.
+// This allows mocking in tests to exercise error paths.
+type yamlMarshaler func(v interface{}) ([]byte, error)
+
+// defaultYAMLMarshaler is the default YAML marshaler.
+var defaultYAMLMarshaler yamlMarshaler = yaml.Marshal
+
 func parseDecryptedYAML(data []byte) (*DecryptedData, error) {
+	return parseDecryptedYAMLWithMarshaler(data, defaultYAMLMarshaler)
+}
+
+func parseDecryptedYAMLWithMarshaler(data []byte, marshal yamlMarshaler) (*DecryptedData, error) {
 	var raw map[string]interface{}
 
 	decoder := yaml.NewDecoder(bytes.NewReader(data))
@@ -197,28 +262,15 @@ func parseDecryptedYAML(data []byte) (*DecryptedData, error) {
 		case string:
 			result.Data[key] = []byte(v)
 			result.StringData[key] = v
-		case []byte:
-			result.Data[key] = v
-			result.StringData[key] = string(v)
 		case int:
 			str := fmt.Sprintf("%d", v)
 			result.Data[key] = []byte(str)
 			result.StringData[key] = str
-		case int64:
-			str := fmt.Sprintf("%d", v)
+		case float64:
+			// yaml.v3 parses integers as int, so float64 only occurs for actual floats
+			str := fmt.Sprintf("%g", v)
 			result.Data[key] = []byte(str)
 			result.StringData[key] = str
-		case float64:
-			// Check if it's actually an integer
-			if v == float64(int64(v)) {
-				str := fmt.Sprintf("%d", int64(v))
-				result.Data[key] = []byte(str)
-				result.StringData[key] = str
-			} else {
-				str := fmt.Sprintf("%g", v)
-				result.Data[key] = []byte(str)
-				result.StringData[key] = str
-			}
 		case bool:
 			str := fmt.Sprintf("%t", v)
 			result.Data[key] = []byte(str)
@@ -227,8 +279,8 @@ func parseDecryptedYAML(data []byte) (*DecryptedData, error) {
 			result.Data[key] = []byte("")
 			result.StringData[key] = ""
 		default:
-			// For complex types, marshal back to YAML
-			yamlBytes, err := yaml.Marshal(v)
+			// For complex types (maps, slices), marshal back to YAML
+			yamlBytes, err := marshal(v)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal value for key %s: %w", key, err)
 			}
