@@ -62,6 +62,7 @@ nav:
   - Configuration: configuration.md
   - API Reference: api-reference.md
   - Security: security.md
+  - OpenSSF Scorecard: SCORECARD.md
 
 extra:
   social:
