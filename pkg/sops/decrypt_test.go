@@ -987,3 +987,29 @@ func TestCommandRunnerWithKeyFile(t *testing.T) {
 		t.Error("SOPS_AGE_KEY_FILE environment variable was not passed to command")
 	}
 }
+
+func TestParseDecryptedYAML_MarshalError(t *testing.T) {
+	// Test the yaml.Marshal error path at decrypt.go:283-285
+	// This tests the "failed to marshal value" error handling.
+	//
+	// We use a mock marshaler that returns an error for complex types
+	// to trigger this error path.
+	input := `
+config:
+  nested: value
+`
+	failingMarshaler := func(v interface{}) ([]byte, error) {
+		return nil, errors.New("intentional marshal error for testing")
+	}
+
+	result, err := parseDecryptedYAMLWithMarshaler([]byte(input), failingMarshaler)
+	if err == nil {
+		t.Fatal("Expected marshal error but got nil")
+	}
+	if result != nil {
+		t.Error("Expected nil result on error")
+	}
+	if !containsString(err.Error(), "failed to marshal value") {
+		t.Errorf("Error should contain 'failed to marshal value', got: %v", err)
+	}
+}

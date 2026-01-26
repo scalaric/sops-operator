@@ -228,7 +228,18 @@ func (d *Decryptor) runSopsDecrypt(ctx context.Context, encryptedYAML []byte) ([
 	return d.runCommand(execCtx, "sops", []string{"-d", tmpPath}, env, encryptedYAML)
 }
 
+// yamlMarshaler is a function type for marshaling values to YAML.
+// This allows mocking in tests to exercise error paths.
+type yamlMarshaler func(v interface{}) ([]byte, error)
+
+// defaultYAMLMarshaler is the default YAML marshaler.
+var defaultYAMLMarshaler yamlMarshaler = yaml.Marshal
+
 func parseDecryptedYAML(data []byte) (*DecryptedData, error) {
+	return parseDecryptedYAMLWithMarshaler(data, defaultYAMLMarshaler)
+}
+
+func parseDecryptedYAMLWithMarshaler(data []byte, marshal yamlMarshaler) (*DecryptedData, error) {
 	var raw map[string]interface{}
 
 	decoder := yaml.NewDecoder(bytes.NewReader(data))
@@ -269,7 +280,7 @@ func parseDecryptedYAML(data []byte) (*DecryptedData, error) {
 			result.StringData[key] = ""
 		default:
 			// For complex types (maps, slices), marshal back to YAML
-			yamlBytes, err := yaml.Marshal(v)
+			yamlBytes, err := marshal(v)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal value for key %s: %w", key, err)
 			}
