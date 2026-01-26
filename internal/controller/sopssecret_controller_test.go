@@ -497,7 +497,7 @@ sops:
 				result, err := reconciler.Reconcile(ctx, req)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(result.Requeue).To(BeTrue())
+				Expect(result.RequeueAfter).To(Equal(time.Second))
 
 				// Verify finalizer was added
 				updated := &secretsv1alpha1.SopsSecret{}
@@ -898,7 +898,7 @@ sops:
 
 				// Verify the Secret was created
 				secret := &corev1.Secret{}
-				err = mockReconciler.Client.Get(ctx, types.NamespacedName{
+				err = mockReconciler.Get(ctx, types.NamespacedName{
 					Name:      "decrypt-success",
 					Namespace: "default",
 				}, secret)
@@ -958,7 +958,7 @@ sops:
 
 				// Verify the Secret was updated
 				secret := &corev1.Secret{}
-				err = mockReconciler.Client.Get(ctx, types.NamespacedName{
+				err = mockReconciler.Get(ctx, types.NamespacedName{
 					Name:      "update-secret",
 					Namespace: "default",
 				}, secret)
