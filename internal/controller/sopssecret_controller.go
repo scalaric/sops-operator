@@ -29,7 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -55,7 +55,7 @@ const (
 type SopsSecretReconciler struct {
 	client.Client
 	Scheme    *runtime.Scheme
-	Recorder  record.EventRecorder
+	Recorder  events.EventRecorder
 	Decryptor *sops.Decryptor
 }
 
@@ -128,7 +128,7 @@ func (r *SopsSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			"ValidationFailed", fmt.Sprintf("Invalid SOPS YAML: %v", err))
 		r.setCondition(sopsSecret, secretsv1alpha1.ConditionTypeReady, metav1.ConditionFalse,
 			"ValidationFailed", "SOPS YAML validation failed")
-		r.Recorder.Event(sopsSecret, corev1.EventTypeWarning, ReasonValidationFail, err.Error())
+		r.Recorder.Eventf(sopsSecret, nil, corev1.EventTypeWarning, ReasonValidationFail, "Validate", "%s", err.Error())
 		return r.updateStatus(ctx, sopsSecret)
 	}
 
@@ -140,13 +140,13 @@ func (r *SopsSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			"DecryptFailed", err.Error())
 		r.setCondition(sopsSecret, secretsv1alpha1.ConditionTypeReady, metav1.ConditionFalse,
 			"DecryptFailed", "Failed to decrypt SOPS data")
-		r.Recorder.Event(sopsSecret, corev1.EventTypeWarning, ReasonDecryptFailed, err.Error())
+		r.Recorder.Eventf(sopsSecret, nil, corev1.EventTypeWarning, ReasonDecryptFailed, "Decrypt", "%s", err.Error())
 		return r.updateStatus(ctx, sopsSecret)
 	}
 
 	r.setCondition(sopsSecret, secretsv1alpha1.ConditionTypeDecrypted, metav1.ConditionTrue,
 		"Success", "Successfully decrypted SOPS data")
-	r.Recorder.Event(sopsSecret, corev1.EventTypeNormal, ReasonDecrypted, "Successfully decrypted SOPS data")
+	r.Recorder.Eventf(sopsSecret, nil, corev1.EventTypeNormal, ReasonDecrypted, "Decrypt", "Successfully decrypted SOPS data")
 
 	// Create or update the Kubernetes Secret
 	secret := r.buildSecret(sopsSecret, decrypted)
@@ -171,7 +171,7 @@ func (r *SopsSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			return ctrl.Result{}, err
 		}
 		log.Info("Created Secret", "name", secret.Name)
-		r.Recorder.Eventf(sopsSecret, corev1.EventTypeNormal, ReasonSecretCreated,
+		r.Recorder.Eventf(sopsSecret, secret, corev1.EventTypeNormal, ReasonSecretCreated, "Create",
 			"Created Secret %s", secret.Name)
 	} else if err != nil {
 		return ctrl.Result{}, err
@@ -187,7 +187,7 @@ func (r *SopsSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			return ctrl.Result{}, err
 		}
 		log.Info("Updated Secret", "name", secret.Name)
-		r.Recorder.Eventf(sopsSecret, corev1.EventTypeNormal, ReasonSecretUpdated,
+		r.Recorder.Eventf(sopsSecret, existingSecret, corev1.EventTypeNormal, ReasonSecretUpdated, "Update",
 			"Updated Secret %s", secret.Name)
 	}
 
@@ -222,7 +222,7 @@ func (r *SopsSecretReconciler) reconcileDelete(ctx context.Context, sopsSecret *
 					return ctrl.Result{}, err
 				}
 				log.Info("Deleted managed Secret", "name", secretName)
-				r.Recorder.Eventf(sopsSecret, corev1.EventTypeNormal, ReasonSecretDeleted,
+				r.Recorder.Eventf(sopsSecret, secret, corev1.EventTypeNormal, ReasonSecretDeleted, "Delete",
 					"Deleted Secret %s", secretName)
 			}
 		} else if !apierrors.IsNotFound(err) {

@@ -204,7 +204,7 @@ func main() {
 	if err := (&controller.SopsSecretReconciler{
 		Client:    mgr.GetClient(),
 		Scheme:    mgr.GetScheme(),
-		Recorder:  mgr.GetEventRecorderFor("sopssecret-controller"),
+		Recorder:  mgr.GetEventRecorder("sopssecret-controller"),
 		Decryptor: decryptor,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "SopsSecret")
