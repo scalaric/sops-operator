@@ -1,0 +1,69 @@
+site_name: SOPS Operator
+site_url: https://scalaric.github.io/sops-operator
+site_description: Kubernetes operator for SOPS-encrypted secrets with AGE support
+site_author: Scalaric
+
+repo_name: scalaric/sops-operator
+repo_url: https://github.com/scalaric/sops-operator
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+  - minify:
+      minify_html: true
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Configuration: configuration.md
+  - API Reference: api-reference.md
+  - Security: security.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/scalaric/sops-operator
+  analytics:
+    provider: google
+    property: G-XXXXXXXXXX  # Replace with your GA4 ID if you have one
