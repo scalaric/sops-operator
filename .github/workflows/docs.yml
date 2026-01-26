@@ -46,10 +46,12 @@ jobs:
       - name: Build documentation
         run: mkdocs build
 
-      - name: Copy verification files
+      - name: Copy extra files
         run: |
           # Copy Google Search Console verification file
           cp docs/google*.html site/ 2>/dev/null || true
+          # Copy robots.txt
+          cp docs/robots.txt site/ 2>/dev/null || true
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4.0.0
