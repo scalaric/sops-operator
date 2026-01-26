@@ -56,7 +56,7 @@ type SopsSecretReconciler struct {
 	client.Client
 	Scheme    *runtime.Scheme
 	Recorder  events.EventRecorder
-	Decryptor *sops.Decryptor
+	Decryptor sops.DecryptorInterface
 }
 
 // +kubebuilder:rbac:groups=secrets.scalaric.io,resources=sopssecrets,verbs=get;list;watch;create;update;patch;delete

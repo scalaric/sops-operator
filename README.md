@@ -3,6 +3,7 @@
 A Kubernetes operator that decrypts [SOPS](https://github.com/getsops/sops)-encrypted secrets and creates native Kubernetes Secrets.
 
 [![CI](https://github.com/scalaric/sops-operator/actions/workflows/ci.yml/badge.svg)](https://github.com/scalaric/sops-operator/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/scalaric/sops-operator/graph/badge.svg)](https://codecov.io/gh/scalaric/sops-operator)
 [![Go Report Card](https://goreportcard.com/badge/github.com/scalaric/sops-operator)](https://goreportcard.com/report/github.com/scalaric/sops-operator)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/scalaric/sops-operator/badge)](https://securityscorecards.dev/viewer/?uri=github.com/scalaric/sops-operator)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
