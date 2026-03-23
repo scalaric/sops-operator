@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -126,6 +127,7 @@ func NewDecryptorFromEnv(opts ...Option) (*Decryptor, error) {
 
 	keyFile := os.Getenv("SOPS_AGE_KEY_FILE")
 	if keyFile != "" {
+		keyFile = filepath.Clean(keyFile)
 		data, err := os.ReadFile(keyFile)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read AGE key file %s: %w", keyFile, err)
