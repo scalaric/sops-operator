@@ -134,6 +134,6 @@ jobs:
           cache: true
 
       - name: Run Gosec
-        uses: securego/gosec@398ad549bbf1a51dc978fd966169f660c59774de # v2.23.0
+        uses: securego/gosec@223e19b8856e00f02cc67804499a83f77e208f3c # v2.25.0
         with:
           args: -exclude=G104,G204,G304 -exclude-dir=test ./...
