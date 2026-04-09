@@ -41,8 +41,10 @@ import (
 
 // MockDecryptor is a test helper that implements sops.DecryptorInterface
 type MockDecryptor struct {
-	DecryptFunc            func([]byte) (*sops.DecryptedData, error)
-	DecryptWithContextFunc func(context.Context, []byte) (*sops.DecryptedData, error)
+	DecryptFunc                         func([]byte) (*sops.DecryptedData, error)
+	DecryptWithContextFunc              func(context.Context, []byte) (*sops.DecryptedData, error)
+	DecryptKeepStructureFunc            func([]byte) (*sops.DecryptedData, error)
+	DecryptKeepStructureWithContextFunc func(context.Context, []byte) (*sops.DecryptedData, error)
 }
 
 func (m *MockDecryptor) Decrypt(data []byte) (*sops.DecryptedData, error) {
@@ -60,6 +62,20 @@ func (m *MockDecryptor) DecryptWithContext(ctx context.Context, data []byte) (*s
 		return m.DecryptWithContextFunc(ctx, data)
 	}
 	return m.Decrypt(data)
+}
+
+func (m *MockDecryptor) DecryptKeepStructure(data []byte) (*sops.DecryptedData, error) {
+	if m.DecryptKeepStructureFunc != nil {
+		return m.DecryptKeepStructureFunc(data)
+	}
+	return m.Decrypt(data)
+}
+
+func (m *MockDecryptor) DecryptKeepStructureWithContext(ctx context.Context, data []byte) (*sops.DecryptedData, error) {
+	if m.DecryptKeepStructureWithContextFunc != nil {
+		return m.DecryptKeepStructureWithContextFunc(ctx, data)
+	}
+	return m.DecryptKeepStructure(data)
 }
 
 // Verify MockDecryptor implements the interface

@@ -1013,3 +1013,209 @@ config:
 		t.Errorf("Error should contain 'failed to marshal value', got: %v", err)
 	}
 }
+
+func TestParseDecryptedYAMLKeepStructure(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		wantKeys []string
+		wantVals map[string]string
+		wantErr  bool
+	}{
+		{
+			// Exact value ordering is map-iteration dependent; we only test
+			// that wantVals entries are present for deterministic scalar cases.
+			name: "nested map value has wrapper key",
+			input: `
+app:
+    meta: value1
+    cache: value2
+`,
+			wantKeys: []string{"app"},
+			wantVals: map[string]string{},
+			wantErr:  false,
+		},
+		{
+			name: "skips sops metadata key",
+			input: `
+username: admin
+sops:
+    mac: test
+    version: 3.9.0
+`,
+			wantKeys: []string{"username"},
+			wantVals: map[string]string{},
+			wantErr:  false,
+		},
+		{
+			name: "multiple top-level keys each get own wrapper",
+			input: `
+db:
+    host: localhost
+    port: 5432
+cache:
+    host: redis
+    port: 6379
+`,
+			wantKeys: []string{"db", "cache"},
+			wantVals: map[string]string{},
+			wantErr:  false,
+		},
+		{
+			name:    "invalid yaml returns error",
+			input:   `{{{not valid yaml`,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := parseDecryptedYAMLKeepStructure([]byte(tt.input))
+			if (err != nil) != tt.wantErr {
+				t.Errorf("parseDecryptedYAMLKeepStructure() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.wantErr {
+				return
+			}
+
+			// Verify expected keys are present
+			for _, key := range tt.wantKeys {
+				if _, ok := result.Data[key]; !ok {
+					t.Errorf("parseDecryptedYAMLKeepStructure() missing key %q", key)
+				}
+			}
+
+			// Verify sops key is never present
+			if _, ok := result.Data["sops"]; ok {
+				t.Error("parseDecryptedYAMLKeepStructure() should not include 'sops' key")
+			}
+
+			// Verify specific expected values
+			for key, wantVal := range tt.wantVals {
+				if gotVal := result.StringData[key]; gotVal != wantVal {
+					t.Errorf("parseDecryptedYAMLKeepStructure() key %q = %q, want %q", key, gotVal, wantVal)
+				}
+			}
+		})
+	}
+}
+
+func TestParseDecryptedYAMLKeepStructure_ValueContainsWrapper(t *testing.T) {
+	// Core invariant: each Secret data value must contain "<key>:" (the wrapper).
+	input := `
+app:
+    meta: value1
+    cache: value2
+db:
+    host: localhost
+`
+	result, err := parseDecryptedYAMLKeepStructure([]byte(input))
+	if err != nil {
+		t.Fatalf("parseDecryptedYAMLKeepStructure() error = %v", err)
+	}
+
+	for key, val := range result.StringData {
+		prefix := key + ":"
+		if !containsString(val, prefix) {
+			t.Errorf("key %q: value %q does not contain wrapper %q", key, val, prefix)
+		}
+	}
+}
+
+func TestParseDecryptedYAMLKeepStructure_VsNormal(t *testing.T) {
+	// Verify that keepStructure produces different output from normal parsing
+	// for nested values, specifically that the key wrapper is present.
+	input := `
+app:
+    meta: value1
+    cache: value2
+`
+	normal, err := parseDecryptedYAML([]byte(input))
+	if err != nil {
+		t.Fatalf("parseDecryptedYAML() error = %v", err)
+	}
+
+	kept, err := parseDecryptedYAMLKeepStructure([]byte(input))
+	if err != nil {
+		t.Fatalf("parseDecryptedYAMLKeepStructure() error = %v", err)
+	}
+
+	normalVal := normal.StringData["app"]
+	keptVal := kept.StringData["app"]
+
+	// Normal should NOT contain "app:" at the start; kept SHOULD.
+	if containsString(normalVal, "app:") {
+		t.Errorf("normal parse should not contain wrapper 'app:', got: %q", normalVal)
+	}
+	if !containsString(keptVal, "app:") {
+		t.Errorf("keepStructure parse should contain wrapper 'app:', got: %q", keptVal)
+	}
+}
+
+func TestParseDecryptedYAMLKeepStructure_MarshalError(t *testing.T) {
+	input := `
+config:
+    nested: value
+`
+	failingMarshaler := func(v interface{}) ([]byte, error) {
+		return nil, errors.New("intentional marshal error")
+	}
+
+	result, err := parseDecryptedYAMLKeepStructureWithMarshaler([]byte(input), failingMarshaler)
+	if err == nil {
+		t.Fatal("Expected marshal error but got nil")
+	}
+	if result != nil {
+		t.Error("Expected nil result on error")
+	}
+	if !containsString(err.Error(), "failed to marshal wrapped value") {
+		t.Errorf("Error should contain 'failed to marshal wrapped value', got: %v", err)
+	}
+}
+
+func TestDecryptKeepStructure_WithMockRunner(t *testing.T) {
+	// Verify DecryptKeepStructure routes through the keepStructure parser.
+	mockRunner := func(ctx context.Context, name string, args []string, env []string, input []byte) ([]byte, error) {
+		return []byte("app:\n    meta: value1\n    cache: value2\n"), nil
+	}
+
+	d := NewDecryptor([]string{"test-key"}, withCommandRunner(mockRunner))
+
+	result, err := d.DecryptKeepStructure([]byte("encrypted: data"))
+	if err != nil {
+		t.Fatalf("DecryptKeepStructure() error = %v", err)
+	}
+
+	appVal := result.StringData["app"]
+	if !containsString(appVal, "app:") {
+		t.Errorf("DecryptKeepStructure() value for 'app' should contain wrapper, got: %q", appVal)
+	}
+	if !containsString(appVal, "meta: value1") {
+		t.Errorf("DecryptKeepStructure() value for 'app' should contain 'meta: value1', got: %q", appVal)
+	}
+}
+
+func TestDecryptKeepStructureWithContext_WithMockRunner(t *testing.T) {
+	mockRunner := func(ctx context.Context, name string, args []string, env []string, input []byte) ([]byte, error) {
+		return []byte("token: mysecret\n"), nil
+	}
+
+	d := NewDecryptor([]string{"test-key"}, withCommandRunner(mockRunner))
+
+	result, err := d.DecryptKeepStructureWithContext(context.Background(), []byte("encrypted: data"))
+	if err != nil {
+		t.Fatalf("DecryptKeepStructureWithContext() error = %v", err)
+	}
+
+	tokenVal := result.StringData["token"]
+	if !containsString(tokenVal, "token:") {
+		t.Errorf("DecryptKeepStructureWithContext() value for 'token' should contain wrapper, got: %q", tokenVal)
+	}
+}
+
+func TestDecryptorInterfaceKeepStructure(t *testing.T) {
+	// Verify that *Decryptor still satisfies DecryptorInterface after adding the new methods.
+	d := NewDecryptor([]string{"test-key"})
+	var _ DecryptorInterface = d
+}

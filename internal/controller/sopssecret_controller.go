@@ -132,8 +132,16 @@ func (r *SopsSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return r.updateStatus(ctx, sopsSecret)
 	}
 
-	// Decrypt the secret
-	decrypted, err := r.Decryptor.Decrypt([]byte(sopsSecret.Spec.SopsSecret))
+	// Decrypt the secret, optionally preserving top-level key wrappers.
+	var (
+		decrypted *sops.DecryptedData
+		err       error
+	)
+	if sopsSecret.Spec.KeepStructure {
+		decrypted, err = r.Decryptor.DecryptKeepStructure([]byte(sopsSecret.Spec.SopsSecret))
+	} else {
+		decrypted, err = r.Decryptor.Decrypt([]byte(sopsSecret.Spec.SopsSecret))
+	}
 	if err != nil {
 		log.Error(err, "Failed to decrypt SopsSecret")
 		r.setCondition(sopsSecret, secretsv1alpha1.ConditionTypeDecrypted, metav1.ConditionFalse,

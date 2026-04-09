@@ -16,6 +16,9 @@ import (
 const (
 	// DefaultDecryptTimeout is the default timeout for sops decrypt operations.
 	DefaultDecryptTimeout = 30 * time.Second
+
+	// sopsMetadataKey is the YAML key used by SOPS for encryption metadata.
+	sopsMetadataKey = "sops"
 )
 
 // DecryptorInterface defines the interface for SOPS decryption operations.
@@ -23,6 +26,8 @@ const (
 type DecryptorInterface interface {
 	Decrypt(encryptedYAML []byte) (*DecryptedData, error)
 	DecryptWithContext(ctx context.Context, encryptedYAML []byte) (*DecryptedData, error)
+	DecryptKeepStructure(encryptedYAML []byte) (*DecryptedData, error)
+	DecryptKeepStructureWithContext(ctx context.Context, encryptedYAML []byte) (*DecryptedData, error)
 }
 
 // CommandRunner is a function type for running external commands.
@@ -184,6 +189,21 @@ func (d *Decryptor) DecryptWithContext(ctx context.Context, encryptedYAML []byte
 	return parseDecryptedYAML(decrypted)
 }
 
+// DecryptKeepStructure decrypts a SOPS-encrypted YAML and returns the data with
+// top-level keys preserved as wrappers in each Secret data entry.
+func (d *Decryptor) DecryptKeepStructure(encryptedYAML []byte) (*DecryptedData, error) {
+	return d.DecryptKeepStructureWithContext(context.Background(), encryptedYAML)
+}
+
+// DecryptKeepStructureWithContext decrypts with a custom context and preserves wrapper keys.
+func (d *Decryptor) DecryptKeepStructureWithContext(ctx context.Context, encryptedYAML []byte) (*DecryptedData, error) {
+	decrypted, err := d.runSopsDecrypt(ctx, encryptedYAML)
+	if err != nil {
+		return nil, err
+	}
+	return parseDecryptedYAMLKeepStructure(decrypted)
+}
+
 // DecryptToYAML decrypts and returns raw YAML bytes.
 func (d *Decryptor) DecryptToYAML(encryptedYAML []byte) ([]byte, error) {
 	return d.DecryptToYAMLWithContext(context.Background(), encryptedYAML)
@@ -256,7 +276,7 @@ func parseDecryptedYAMLWithMarshaler(data []byte, marshal yamlMarshaler) (*Decry
 
 	for key, value := range raw {
 		// Skip sops metadata if present in decrypted output
-		if key == "sops" {
+		if key == sopsMetadataKey {
 			continue
 		}
 
@@ -296,6 +316,49 @@ func parseDecryptedYAMLWithMarshaler(data []byte, marshal yamlMarshaler) (*Decry
 	return result, nil
 }
 
+// parseDecryptedYAMLKeepStructure parses the decrypted YAML and builds Secret data entries
+// where each top-level key's value is re-marshaled with the key as a wrapper.
+// For example, a top-level key "app" with map value "{meta: value1}" becomes the
+// Secret data entry "app" with value "app:\n    meta: value1\n" (trailing newline trimmed).
+// Scalar values (strings, ints, booleans) are also wrapped in the same way.
+func parseDecryptedYAMLKeepStructure(data []byte) (*DecryptedData, error) {
+	return parseDecryptedYAMLKeepStructureWithMarshaler(data, defaultYAMLMarshaler)
+}
+
+func parseDecryptedYAMLKeepStructureWithMarshaler(data []byte, marshal yamlMarshaler) (*DecryptedData, error) {
+	var raw map[string]interface{}
+
+	decoder := yaml.NewDecoder(bytes.NewReader(data))
+	if err := decoder.Decode(&raw); err != nil {
+		return nil, fmt.Errorf("failed to parse decrypted YAML: %w", err)
+	}
+
+	result := &DecryptedData{
+		Data:       make(map[string][]byte),
+		StringData: make(map[string]string),
+	}
+
+	for key, value := range raw {
+		// Skip sops metadata if present in decrypted output
+		if key == sopsMetadataKey {
+			continue
+		}
+
+		// Re-marshal the value wrapped under its original key so the Secret data
+		// entry contains e.g. "app:\n    meta: value1" rather than just "meta: value1".
+		yamlBytes, err := marshal(map[string]interface{}{key: value})
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal wrapped value for key %s: %w", key, err)
+		}
+		// Remove trailing newline from yaml.Marshal
+		yamlBytes = bytes.TrimSuffix(yamlBytes, []byte("\n"))
+		result.Data[key] = yamlBytes
+		result.StringData[key] = string(yamlBytes)
+	}
+
+	return result, nil
+}
+
 // ValidateEncryptedYAML checks if the given data is a valid SOPS-encrypted YAML.
 func ValidateEncryptedYAML(data []byte) error {
 	if len(data) == 0 {
@@ -307,7 +370,7 @@ func ValidateEncryptedYAML(data []byte) error {
 		return fmt.Errorf("invalid YAML: %w", err)
 	}
 
-	sopsMetadata, ok := raw["sops"]
+	sopsMetadata, ok := raw[sopsMetadataKey]
 	if !ok {
 		return fmt.Errorf("missing sops metadata block")
 	}

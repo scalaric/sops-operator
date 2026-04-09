@@ -47,6 +47,13 @@ type SopsSecretSpec struct {
 	// +optional
 	SecretAnnotations map[string]string `json:"secretAnnotations,omitempty"`
 
+	// keepStructure preserves the top-level key as a wrapper in each Secret data entry.
+	// When false (default), a top-level key "app" with value "{meta: value1}" is stored
+	// as Secret key "app" with value "meta: value1" (wrapper stripped).
+	// When true, the same key is stored with value "app:\n    meta: value1" (wrapper kept).
+	// +optional
+	KeepStructure bool `json:"keepStructure,omitempty"`
+
 	// suspend stops reconciliation when true.
 	// +optional
 	Suspend bool `json:"suspend,omitempty"`
