@@ -97,8 +97,8 @@ password: secret123
 `,
 			wantKeys: []string{"username", "password"},
 			wantVals: map[string]string{
-				"username": "admin",
-				"password": "secret123",
+				"username": "username: admin",
+				"password": "password: secret123",
 			},
 			wantErr: false,
 		},
@@ -111,9 +111,9 @@ count: 100
 `,
 			wantKeys: []string{"port", "ratio", "count"},
 			wantVals: map[string]string{
-				"port":  "5432",
-				"ratio": "3.14",
-				"count": "100",
+				"port":  "port: 5432",
+				"ratio": "ratio: 3.14",
+				"count": "count: 100",
 			},
 			wantErr: false,
 		},
@@ -125,8 +125,8 @@ disabled: false
 `,
 			wantKeys: []string{"enabled", "disabled"},
 			wantVals: map[string]string{
-				"enabled":  "true",
-				"disabled": "false",
+				"enabled":  "enabled: true",
+				"disabled": "disabled: false",
 			},
 			wantErr: false,
 		},
@@ -140,7 +140,7 @@ sops:
 `,
 			wantKeys: []string{"username"},
 			wantVals: map[string]string{
-				"username": "admin",
+				"username": "username: admin",
 			},
 			wantErr: false,
 		},
@@ -151,7 +151,7 @@ empty_value: null
 `,
 			wantKeys: []string{"empty_value"},
 			wantVals: map[string]string{
-				"empty_value": "",
+				"empty_value": "empty_value: null",
 			},
 			wantErr: false,
 		},
@@ -365,7 +365,7 @@ count: 42
 `,
 			wantKeys: []string{"count"},
 			wantVals: map[string]string{
-				"count": "42",
+				"count": "count: 42",
 			},
 			wantErr: false,
 		},
@@ -376,7 +376,7 @@ ratio: 3.14159
 `,
 			wantKeys: []string{"ratio"},
 			wantVals: map[string]string{
-				"ratio": "3.14159",
+				"ratio": "ratio: 3.14159",
 			},
 			wantErr: false,
 		},
@@ -652,43 +652,43 @@ func TestParseDecryptedYAMLAllTypes(t *testing.T) {
 			name:     "string value",
 			input:    "key: hello",
 			key:      "key",
-			expected: "hello",
+			expected: "key: hello",
 		},
 		{
 			name:     "integer (parsed as int by yaml)",
 			input:    "key: 123",
 			key:      "key",
-			expected: "123",
+			expected: "key: 123",
 		},
 		{
 			name:     "float value",
 			input:    "key: 3.14",
 			key:      "key",
-			expected: "3.14",
+			expected: "key: 3.14",
 		},
 		{
 			name:     "boolean true",
 			input:    "key: true",
 			key:      "key",
-			expected: "true",
+			expected: "key: true",
 		},
 		{
 			name:     "boolean false",
 			input:    "key: false",
 			key:      "key",
-			expected: "false",
+			expected: "key: false",
 		},
 		{
 			name:     "null value",
 			input:    "key: null",
 			key:      "key",
-			expected: "",
+			expected: "key: null",
 		},
 		{
 			name:     "empty string",
 			input:    "key: ''",
 			key:      "key",
-			expected: "",
+			expected: "key: \"\"",
 		},
 	}
 
@@ -814,11 +814,11 @@ func TestWithCommandRunner(t *testing.T) {
 		t.Fatalf("Decrypt() error = %v", err)
 	}
 
-	if result.StringData["username"] != "admin" {
-		t.Errorf("Expected username 'admin', got %q", result.StringData["username"])
+	if result.StringData["username"] != "username: admin" {
+		t.Errorf("Expected 'username: admin', got %q", result.StringData["username"])
 	}
-	if result.StringData["password"] != "secret" {
-		t.Errorf("Expected password 'secret', got %q", result.StringData["password"])
+	if result.StringData["password"] != "password: secret" {
+		t.Errorf("Expected 'password: secret', got %q", result.StringData["password"])
 	}
 }
 
@@ -844,11 +844,11 @@ func TestDecryptWithContext_Success(t *testing.T) {
 		t.Fatalf("DecryptWithContext() error = %v", err)
 	}
 
-	if result.StringData["key"] != "value" {
-		t.Errorf("Expected key 'value', got %q", result.StringData["key"])
+	if result.StringData["key"] != "key: value" {
+		t.Errorf("Expected 'key: value', got %q", result.StringData["key"])
 	}
-	if result.StringData["count"] != "42" {
-		t.Errorf("Expected count '42', got %q", result.StringData["count"])
+	if result.StringData["count"] != "count: 42" {
+		t.Errorf("Expected 'count: 42', got %q", result.StringData["count"])
 	}
 }
 

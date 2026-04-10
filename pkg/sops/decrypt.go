@@ -260,37 +260,17 @@ func parseDecryptedYAMLWithMarshaler(data []byte, marshal yamlMarshaler) (*Decry
 			continue
 		}
 
-		switch v := value.(type) {
-		case string:
-			result.Data[key] = []byte(v)
-			result.StringData[key] = v
-		case int:
-			str := fmt.Sprintf("%d", v)
-			result.Data[key] = []byte(str)
-			result.StringData[key] = str
-		case float64:
-			// yaml.v3 parses integers as int, so float64 only occurs for actual floats
-			str := fmt.Sprintf("%g", v)
-			result.Data[key] = []byte(str)
-			result.StringData[key] = str
-		case bool:
-			str := fmt.Sprintf("%t", v)
-			result.Data[key] = []byte(str)
-			result.StringData[key] = str
-		case nil:
-			result.Data[key] = []byte("")
-			result.StringData[key] = ""
-		default:
-			// For complex types (maps, slices), marshal back to YAML
-			yamlBytes, err := marshal(v)
-			if err != nil {
-				return nil, fmt.Errorf("failed to marshal value for key %s: %w", key, err)
-			}
-			// Remove trailing newline from yaml.Marshal
-			yamlBytes = bytes.TrimSuffix(yamlBytes, []byte("\n"))
-			result.Data[key] = yamlBytes
-			result.StringData[key] = string(yamlBytes)
+		// Re-marshal each value wrapped under its original key to preserve YAML structure.
+		// This ensures Secret data entries maintain the top-level key as a wrapper,
+		// e.g. key "app" with nested value becomes "app:\n  db:\n    host: localhost".
+		yamlBytes, err := marshal(map[string]interface{}{key: value})
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal value for key %s: %w", key, err)
 		}
+		// Remove trailing newline from yaml.Marshal
+		yamlBytes = bytes.TrimSuffix(yamlBytes, []byte("\n"))
+		result.Data[key] = yamlBytes
+		result.StringData[key] = string(yamlBytes)
 	}
 
 	return result, nil
