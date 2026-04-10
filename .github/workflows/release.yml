@@ -144,9 +144,9 @@ jobs:
         run: |
           cd dist
           # Sign install.yaml
-          cosign sign-blob --yes --output-signature install.yaml.sig --output-certificate install.yaml.pem install.yaml
+          cosign sign-blob --yes --bundle install.yaml.bundle install.yaml
           # Sign checksums
-          cosign sign-blob --yes --output-signature checksums.txt.sig --output-certificate checksums.txt.pem checksums.txt
+          cosign sign-blob --yes --bundle checksums.txt.bundle checksums.txt
 
       - name: Attest build provenance
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
@@ -162,11 +162,9 @@ jobs:
           body_path: release-notes.md
           files: |
             dist/install.yaml
-            dist/install.yaml.sig
-            dist/install.yaml.pem
+            dist/install.yaml.bundle
             dist/install.yaml.sha256
             dist/checksums.txt
-            dist/checksums.txt.sig
-            dist/checksums.txt.pem
+            dist/checksums.txt.bundle
             sbom.spdx.json
           generate_release_notes: true
