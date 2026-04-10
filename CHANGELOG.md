@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0](https://github.com/scalaric/sops-operator/compare/v1.0.0...v1.1.0) (2026-04-10)
+
+
+### Features
+
+* preserve YAML structure in decrypted Secret data ([#69](https://github.com/scalaric/sops-operator/issues/69)) ([447a28e](https://github.com/scalaric/sops-operator/commit/447a28e086db0178a2011c2b9fb77040b7e92914))
+
+
+### Bug Fixes
+
+* add robots.txt with sitemap reference ([28e65e1](https://github.com/scalaric/sops-operator/commit/28e65e15ebc3174c9b0335ec9967753257be38b9))
+* copy Google verification file to site ([4f0ab2d](https://github.com/scalaric/sops-operator/commit/4f0ab2d8905f3ad0fbefe950e7f974a5ab7f8810))
+* enable emoji rendering in docs ([bea5f4a](https://github.com/scalaric/sops-operator/commit/bea5f4aae33883659699a3118bdb5f6a02ff0446))
+* pin setup-envtest to commit SHA for Scorecard compliance ([#13](https://github.com/scalaric/sops-operator/issues/13)) ([2a6b8b8](https://github.com/scalaric/sops-operator/commit/2a6b8b8a06583a67a35e6d1faaad1da41c732a89))
+* sanitize SOPS_AGE_KEY_FILE path to resolve gosec G703 ([3eb17f8](https://github.com/scalaric/sops-operator/commit/3eb17f87f45e751ac28f4b805e35b273d7b40bda))
+
 ## 1.0.0 (2026-01-15)
 
 
