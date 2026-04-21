@@ -23,6 +23,8 @@ import (
 	"fmt"
 	"time"
 
+	"gopkg.in/yaml.v3"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -259,6 +261,14 @@ func (r *SopsSecretReconciler) buildSecret(sopsSecret *secretsv1alpha1.SopsSecre
 		annotations[k] = v
 	}
 
+	// For non-Opaque secret types (e.g. kubernetes.io/dockerconfigjson, kubernetes.io/tls),
+	// use raw decrypted values instead of YAML-wrapped values. Kubernetes validates
+	// the data format for typed secrets, and YAML wrapping breaks that validation.
+	data := decrypted.Data
+	if secretType != corev1.SecretTypeOpaque {
+		data = unwrapYAMLValues(decrypted)
+	}
+
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        secretName,
@@ -267,8 +277,30 @@ func (r *SopsSecretReconciler) buildSecret(sopsSecret *secretsv1alpha1.SopsSecre
 			Annotations: annotations,
 		},
 		Type: secretType,
-		Data: decrypted.Data,
+		Data: data,
 	}
+}
+
+// unwrapYAMLValues extracts raw values from YAML-wrapped decrypted data.
+// Decrypted data stores values as "key: value" (YAML-wrapped). For typed secrets
+// like kubernetes.io/dockerconfigjson, we need just the raw value without the key wrapper.
+func unwrapYAMLValues(decrypted *sops.DecryptedData) map[string][]byte {
+	data := make(map[string][]byte, len(decrypted.Data))
+	for key, yamlWrapped := range decrypted.Data {
+		raw := make(map[string]interface{})
+		if err := yaml.Unmarshal(yamlWrapped, &raw); err == nil {
+			if val, ok := raw[key]; ok {
+				switch v := val.(type) {
+				case string:
+					data[key] = []byte(v)
+					continue
+				}
+			}
+		}
+		// Fallback: use as-is if unwrapping fails
+		data[key] = yamlWrapped
+	}
+	return data
 }
 
 func (r *SopsSecretReconciler) getSecretName(sopsSecret *secretsv1alpha1.SopsSecret) string {
