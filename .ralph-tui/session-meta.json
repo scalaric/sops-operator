@@ -1,0 +1,15 @@
+{
+  "id": "57abb6cb-f8f7-4be4-898a-1e1ad38c083c",
+  "status": "completed",
+  "startedAt": "2026-01-26T11:05:04.819Z",
+  "updatedAt": "2026-01-26T11:16:34.724Z",
+  "agentPlugin": "claude",
+  "trackerPlugin": "json",
+  "prdPath": "./tasks/prd.json",
+  "currentIteration": 4,
+  "maxIterations": 10,
+  "totalTasks": 0,
+  "tasksCompleted": 4,
+  "cwd": "/Users/bartek/moje/gg/git/gg/sops-operator",
+  "endedAt": "2026-01-26T11:16:34.724Z"
+}

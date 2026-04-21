@@ -1,0 +1,98 @@
+{
+  "name": "100% Test Coverage for sops-operator",
+  "branchName": "feature/100-test-coverage",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Add test for tmpFile.Close() error path",
+      "description": "As a developer, I want to test the file close error handling in runSopsDecrypt so that all error paths are covered.",
+      "acceptanceCriteria": [
+        "Add test that triggers tmpFile.Close() error at decrypt.go:194-195",
+        "Use mock file implementation that returns error on Close()",
+        "Verify error message contains 'failed to close temp file'",
+        "go tool cover -func shows 100% for runSopsDecrypt"
+      ],
+      "priority": 1,
+      "passes": true,
+      "dependsOn": [],
+      "labels": [
+        "testing",
+        "coverage"
+      ],
+      "notes": "Use withTempFileCreator option to inject mock file that fails on Close()",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-002",
+      "title": "Add test for yaml.Marshal error path",
+      "description": "As a developer, I want to test the yaml.Marshal error handling in parseDecryptedYAML so that all error paths are covered.",
+      "acceptanceCriteria": [
+        "Add test that triggers yaml.Marshal failure at decrypt.go:256-258",
+        "Use a complex type that cannot be marshaled (e.g., channel or function)",
+        "Verify error message contains 'failed to marshal value'",
+        "go tool cover -func shows 100% for parseDecryptedYAML"
+      ],
+      "priority": 2,
+      "passes": true,
+      "dependsOn": [
+        "US-001"
+      ],
+      "labels": [
+        "testing",
+        "coverage"
+      ],
+      "notes": "The parseDecryptedYAML function is not exported, so tests must use exported API or inject unmarshalable type into parsed map",
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-003",
+      "title": "Update codecov.yml for 100% target",
+      "description": "As a project maintainer, I want to configure Codecov.io to require 100% coverage so that coverage regressions fail CI.",
+      "acceptanceCriteria": [
+        "Update codecov.yml target from 80% to 100%",
+        "Update codecov.yml threshold from 5% to 0%",
+        "Verify ignore patterns cover all non-production code: cmd/**/*, test/**/*, **/zz_generated*.go, **/*_test.go",
+        "Codecov.io reports 100% after changes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "dependsOn": [
+        "US-001",
+        "US-002"
+      ],
+      "labels": [
+        "ci",
+        "codecov",
+        "configuration"
+      ],
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-004",
+      "title": "Verify all coverage gaps are addressed",
+      "description": "As a developer, I want to verify the project achieves 100% test coverage so that the coverage target is met.",
+      "acceptanceCriteria": [
+        "Run go test -race -coverprofile=coverage.out ./...",
+        "Run go tool cover -func=coverage.out and verify pkg/sops/decrypt.go shows 100% for all functions",
+        "Run go tool cover -func=coverage.out and verify internal/controller/sopssecret_controller.go shows 100% for all functions",
+        "Upload coverage to Codecov.io and verify 100% project coverage",
+        "All packages show either 100% or are in ignore list"
+      ],
+      "priority": 4,
+      "passes": true,
+      "dependsOn": [
+        "US-001",
+        "US-002",
+        "US-003"
+      ],
+      "labels": [
+        "verification",
+        "coverage"
+      ],
+      "completionNotes": "Completed by agent"
+    }
+  ],
+  "metadata": {
+    "updatedAt": "2026-01-26T11:16:03.027Z"
+  }
+}
