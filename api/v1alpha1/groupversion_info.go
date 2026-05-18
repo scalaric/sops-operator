@@ -29,6 +29,7 @@ var (
 	GroupVersion = schema.GroupVersion{Group: "secrets.scalaric.io", Version: "v1alpha1"}
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme.
+	//nolint:staticcheck // controller-runtime v0.24 deprecates scheme.Builder; kubebuilder-generated code still relies on it.
 	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}
 
 	// AddToScheme adds the types in this group-version to the given scheme.
