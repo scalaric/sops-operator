@@ -25,7 +25,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a \
 
 # Download SOPS binary
 # renovate: datasource=docker depName=alpine
-FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS sops-downloader
+FROM alpine:3.24@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a AS sops-downloader
 ARG TARGETARCH
 ARG SOPS_VERSION=3.9.2
 
@@ -41,7 +41,7 @@ RUN apk add --no-cache curl && \
 
 # Final image with SOPS
 # renovate: datasource=docker depName=alpine
-FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
+FROM alpine:3.24@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a
 WORKDIR /
 
 # Install ca-certificates for HTTPS and age for potential direct key operations
